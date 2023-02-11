@@ -24,26 +24,22 @@ const createRecipe = async (
 };
 
 const getRecipeById = async (source, id) => {
-  const recipe =
-    source === "db"
-      ? await Recipes.findByPk(id, {
-          include: [
-            {
-              model: Diets,
-              through: { attributes: ["DietName"] },
-            },
-          ],
-        })
-      : (
-          await axios.get(
-            `https://api.spoonacular.com/recipes/${id}/information?apiKey=${API_KEY}&addRecipeInformation=true`
-          )
-        ).data;
+  let recipe = {};
 
   if (source === "db") {
+    recipe = await Recipes.findByPk(id, {
+      include: [
+        {
+          model: Diets,
+          through: { attributes: ["DietName"] },
+        },
+      ],
+    });
     const diets = recipe.Diets.map((diet) => {
       return diet.name;
     });
+    // diets comes in a Diet key with info I don't need, so i clean it up and return it
+
     return (cleanRecipe = {
       title: recipe.title,
       summary: recipe.summary,
@@ -51,7 +47,14 @@ const getRecipeById = async (source, id) => {
       instructions: recipe.instructions,
       diets: diets,
     });
-  } else {
+  }
+  // If the recipe is in my db, i want to find it via it's id joined with it's associated diets y return it
+  else {
+    recipe = (
+      await axios.get(
+        `https://api.spoonacular.com/recipes/${id}/information?apiKey=${API_KEY}&addRecipeInformation=true`
+      )
+    ).data;
     return (cleanRecipe = {
       image: recipe.image,
       title: recipe.title,
@@ -62,6 +65,8 @@ const getRecipeById = async (source, id) => {
     });
   }
 };
+
+// If the diet's not in my db, I ask for it from the API and clean it up before returning it
 
 const getRecipeByQuery = async (name) => {
   const result = [];
@@ -91,5 +96,6 @@ const getRecipeByQuery = async (name) => {
   }
   return result;
 };
+// Not finished. When i search for a recipe, i look for it in my db and also in the API , return the results
 
 module.exports = { createRecipe, getRecipeById, getRecipeByQuery };
